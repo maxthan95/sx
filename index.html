@@ -23,8 +23,8 @@
         </div>
     </div>
 
-    <script type="text/babel">
-        function RunApp() {
+    <script type="text/babel" id="app-jsx">
+        function App() {
             const { useState, useEffect, useMemo, useRef } = React;
             const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } = Recharts;
             
@@ -464,20 +464,37 @@
                 </div>
               );
             };
-
-            const root = ReactDOM.createRoot(document.getElementById('root'));
-            root.render(<App />);
         }
+    </script>
 
+    <script>
         window.addEventListener('load', () => {
             const libraryCheck = setInterval(() => {
-                if (window.React && window.ReactDOM && window.Recharts && window.lucide) {
+                if (window.React && window.ReactDOM && window.Recharts && window.lucide && window.Babel) {
                     clearInterval(libraryCheck);
-                    RunApp();
+                    try {
+                        const jsxScript = document.getElementById('app-jsx').textContent;
+                        // Chuyển đổi mã JSX thành JavaScript
+                        const transformedCode = Babel.transform(jsxScript, { presets: ['react'] }).code;
+                        
+                        // Tạo một thẻ script mới và chèn mã đã chuyển đổi vào
+                        const script = document.createElement('script');
+                        script.innerHTML = `
+                            const App = (() => {
+                                ${transformedCode}
+                                return App;
+                            })();
+                            const root = ReactDOM.createRoot(document.getElementById('root'));
+                            root.render(React.createElement(App));
+                        `;
+                        document.body.appendChild(script);
+                    } catch (error) {
+                        console.error("Lỗi khi chuyển đổi JSX:", error);
+                        document.getElementById('root').innerHTML = '<div style="color: red; padding: 20px;">Đã xảy ra lỗi nghiêm trọng khi khởi tạo ứng dụng. Vui lòng kiểm tra Console để biết thêm chi tiết.</div>';
+                    }
                 }
             }, 100);
         });
-
     </script>
 </body>
 </html>
