@@ -1,0 +1,826 @@
+{/* Công thức và giải thích */}
+        <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">🧮 Công thức & Phương pháp Dự đoán</h2>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gapimport React, { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { Coins, Play, Pause, RotateCcw, TrendingUp, Calculator, Upload, Brain, Target } from 'lucide-react';
+
+const CoinProbabilityPredictor = () => {
+  const [coins, setCoins] = useState([
+    { id: 1, result: null, isFlipping: false },
+    { id: 2, result: null, isFlipping: false },
+    { id: 3, result: null, isFlipping: false },
+    { id: 4, result: null, isFlipping: false }
+  ]);
+  const [isFlipping, setIsFlipping] = useState(false);
+  const [results, setResults] = useState([]);
+  const [statistics, setStatistics] = useState({});
+  const [autoMode, setAutoMode] = useState(false);
+  const [flipCount, setFlipCount] = useState(0);
+  const [showHistoryInput, setShowHistoryInput] = useState(false);
+  const [historyInput, setHistoryInput] = useState('');
+  const [prediction, setPrediction] = useState(null);
+  const [patterns, setPatterns] = useState({});
+  const [aiAnalysis, setAiAnalysis] = useState('');
+
+  // Tính toán tất cả các kết quả có thể xảy ra (2^4 = 16 kết quả)
+  const getAllPossibleOutcomes = () => {
+    const outcomes = [];
+    for (let i = 0; i < 16; i++) {
+      const binary = i.toString(2).padStart(4, '0');
+      const outcome = binary.split('').map(bit => bit === '1' ? 'Đỏ' : 'Trắng');
+      outcomes.push(outcome);
+    }
+    return outcomes;
+  const factorial = (n) => {
+    if (n <= 1) return 1;
+    return n * factorial(n - 1);
+  };
+
+  // Tính xác suất cho từng kết quả
+  const calculateProbabilities = () => {
+    const probabilities = [];
+    
+    // Xác suất cho số lượng đồng đỏ khác nhau
+    for (let redCount = 0; redCount <= 4; redCount++) {
+      const combinations = factorial(4) / (factorial(redCount) * factorial(4 - redCount));
+      const probability = (combinations / 16) * 100;
+      probabilities.push({
+        outcome: `${redCount} Đỏ, ${4 - redCount} Trắng`,
+        probability: probability,
+        count: combinations,
+        redCount: redCount
+      });
+    }
+    
+    return probabilities;
+  };
+
+  // Phân tích pattern và đưa ra dự đoán
+  const analyzePatterns = (resultsArray) => {
+    if (resultsArray.length < 3) {
+      setPrediction(null);
+      setAiAnalysis('Cần ít nhất 3 lần tung để phân tích pattern');
+      return;
+    }
+
+    const redCounts = resultsArray.map(r => r.redCount);
+    const last5 = redCounts.slice(-5);
+    const last10 = redCounts.slice(-10);
+    
+    // Phân tích xu hướng
+    const trend = calculateTrend(last10);
+    const cyclePattern = findCyclePattern(redCounts);
+    const frequency = calculateFrequency(redCounts);
+    
+    // Dự đoán dựa trên multiple factors
+    const predictions = {
+      trend: predictByTrend(trend, redCounts),
+      cycle: predictByCycle(cyclePattern, redCounts),
+      frequency: predictByFrequency(frequency),
+      markov: predictByMarkov(redCounts),
+      regression: predictByRegression(redCounts)
+    };
+    
+    // Tổng hợp dự đoán
+    const finalPrediction = combinePredictions(predictions);
+    
+    setPrediction(finalPrediction);
+    setPatterns({
+      trend,
+      cycle: cyclePattern,
+      frequency,
+      recent: last5,
+      average: (redCounts.reduce((a, b) => a + b, 0) / redCounts.length).toFixed(2)
+    });
+    
+    // Tạo phân tích AI
+    generateAIAnalysis(predictions, patterns, redCounts);
+  };
+
+  // Tính xu hướng tăng/giảm
+  const calculateTrend = (data) => {
+    if (data.length < 2) return 0;
+    let increases = 0, decreases = 0;
+    for (let i = 1; i < data.length; i++) {
+      if (data[i] > data[i-1]) increases++;
+      else if (data[i] < data[i-1]) decreases++;
+    }
+    return (increases - decreases) / (data.length - 1);
+  };
+
+  // Tìm pattern lặp lại
+  const findCyclePattern = (data) => {
+    const patterns = {};
+    for (let len = 2; len <= Math.min(5, Math.floor(data.length/2)); len++) {
+      for (let i = 0; i <= data.length - len * 2; i++) {
+        const pattern = data.slice(i, i + len).join(',');
+        const nextPattern = data.slice(i + len, i + len * 2).join(',');
+        if (pattern === nextPattern) {
+          patterns[pattern] = (patterns[pattern] || 0) + 1;
+        }
+      }
+    }
+    return Object.keys(patterns).length > 0 ? patterns : null;
+  };
+
+  // Tính tần suất xuất hiện
+  const calculateFrequency = (data) => {
+    const freq = {};
+    data.forEach(val => {
+      freq[val] = (freq[val] || 0) + 1;
+    });
+    return freq;
+  };
+
+  // Dự đoán theo xu hướng
+  const predictByTrend = (trend, data) => {
+    const lastValue = data[data.length - 1];
+    if (trend > 0.3) return Math.min(4, lastValue + 1);
+    if (trend < -0.3) return Math.max(0, lastValue - 1);
+    return lastValue;
+  };
+
+  // Dự đoán theo cycle
+  const predictByCycle = (cycles, data) => {
+    if (!cycles) return null;
+    const mostCommon = Object.keys(cycles).reduce((a, b) => cycles[a] > cycles[b] ? a : b);
+    const pattern = mostCommon.split(',').map(Number);
+    const recentMatch = data.slice(-pattern.length).join(',');
+    if (recentMatch === mostCommon && data.length > pattern.length) {
+      return pattern[0]; // Dự đoán giá trị tiếp theo trong cycle
+    }
+    return null;
+  };
+
+  // Dự đoán theo tần suất
+  const predictByFrequency = (frequency) => {
+    return parseInt(Object.keys(frequency).reduce((a, b) => frequency[a] > frequency[b] ? a : b));
+  };
+
+  // Dự đoán theo Markov Chain
+  const predictByMarkov = (data) => {
+    if (data.length < 2) return null;
+    const transitions = {};
+    for (let i = 0; i < data.length - 1; i++) {
+      const current = data[i];
+      const next = data[i + 1];
+      if (!transitions[current]) transitions[current] = {};
+      transitions[current][next] = (transitions[current][next] || 0) + 1;
+    }
+    
+    const lastValue = data[data.length - 1];
+    if (transitions[lastValue]) {
+      return parseInt(Object.keys(transitions[lastValue]).reduce((a, b) => 
+        transitions[lastValue][a] > transitions[lastValue][b] ? a : b
+      ));
+    }
+    return null;
+  };
+
+  // Dự đoán theo regression đơn giản
+  const predictByRegression = (data) => {
+    if (data.length < 3) return null;
+    const n = data.length;
+    const sumX = (n * (n - 1)) / 2;
+    const sumY = data.reduce((a, b) => a + b, 0);
+    const sumXY = data.reduce((sum, y, x) => sum + x * y, 0);
+    const sumX2 = (n * (n - 1) * (2 * n - 1)) / 6;
+    
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    
+    return Math.round(Math.max(0, Math.min(4, slope * n + intercept)));
+  };
+
+  // Tổng hợp các dự đoán
+  const combinePredictions = (predictions) => {
+    const validPredictions = Object.values(predictions).filter(p => p !== null);
+    if (validPredictions.length === 0) return { value: 2, confidence: 20 };
+    
+    const predictionCounts = {};
+    validPredictions.forEach(p => {
+      predictionCounts[p] = (predictionCounts[p] || 0) + 1;
+    });
+    
+    const mostCommon = Object.keys(predictionCounts).reduce((a, b) => 
+      predictionCounts[a] > predictionCounts[b] ? a : b
+    );
+    
+    const confidence = Math.round((predictionCounts[mostCommon] / validPredictions.length) * 100);
+    
+    return {
+      value: parseInt(mostCommon),
+      confidence: confidence,
+      methods: Object.keys(predictions).filter(k => predictions[k] == mostCommon),
+      allPredictions: predictions
+    };
+  };
+
+  // Tạo phân tích AI
+  const generateAIAnalysis = (predictions, patterns, data) => {
+    let analysis = [];
+    
+    if (patterns.trend > 0.3) {
+      analysis.push("📈 Xu hướng tăng mạnh được phát hiện");
+    } else if (patterns.trend < -0.3) {
+      analysis.push("📉 Xu hướng giảm mạnh được phát hiện");
+    } else {
+      analysis.push("📊 Dữ liệu tương đối ổn định, không có xu hướng rõ ràng");
+    }
+    
+    if (patterns.cycle) {
+      analysis.push(`🔄 Phát hiện pattern lặp lại: ${Object.keys(patterns.cycle)[0]}`);
+    }
+    
+    const recentAvg = data.slice(-5).reduce((a, b) => a + b, 0) / Math.min(5, data.length);
+    const overallAvg = parseFloat(patterns.average);
+    
+    if (recentAvg > overallAvg + 0.5) {
+      analysis.push("⬆️ 5 lần gần đây có xu hướng cao hơn trung bình");
+    } else if (recentAvg < overallAvg - 0.5) {
+      analysis.push("⬇️ 5 lần gần đây có xu hướng thấp hơn trung bình");
+    }
+    
+    setAiAnalysis(analysis.join('\n'));
+  };
+
+  // Xử lý nhập lịch sử
+  const processHistoryInput = () => {
+    try {
+      const lines = historyInput.trim().split('\n');
+      const newResults = [];
+      
+      lines.forEach((line, index) => {
+        if (line.trim()) {
+          // Hỗ trợ nhiều format: "2" hoặc "ĐTĐT" hoặc "RTRT" v.v.
+          let redCount;
+          
+          if (/^\d+$/.test(line.trim())) {
+            // Format số: "2"
+            redCount = parseInt(line.trim());
+          } else {
+            // Format chuỗi: "ĐTĐT" hoặc "RTRT"
+            const normalized = line.trim().toUpperCase();
+            redCount = (normalized.match(/[ĐDR1]/g) || []).length;
+          }
+          
+          if (redCount >= 0 && redCount <= 4) {
+            const outcome = Array(4).fill(0).map((_, i) => i < redCount ? 'Đỏ' : 'Trắng');
+            newResults.push({
+              flip: results.length + index + 1,
+              outcome: outcome.join(', '),
+              redCount: redCount,
+              timestamp: new Date().toLocaleTimeString(),
+              isImported: true
+            });
+          }
+        }
+      });
+      
+      if (newResults.length > 0) {
+        setResults(prev => [...prev, ...newResults]);
+        setFlipCount(prev => prev + newResults.length);
+        setHistoryInput('');
+        setShowHistoryInput(false);
+        
+        // Phân tích ngay sau khi nhập
+        setTimeout(() => analyzePatterns([...results, ...newResults]), 100);
+      }
+    } catch (error) {
+      alert('Lỗi định dạng dữ liệu. Vui lòng kiểm tra lại!');
+    }
+  };
+
+  // Mô phỏng tung đồng tiền
+  const flipCoins = () => {
+    if (isFlipping) return;
+    
+    setIsFlipping(true);
+    setCoins(coins.map(coin => ({ ...coin, isFlipping: true, result: null })));
+    
+    setTimeout(() => {
+      const newResults = coins.map(coin => ({
+        ...coin,
+        result: Math.random() < 0.5 ? 'Đỏ' : 'Trắng',
+        isFlipping: false
+      }));
+      
+      setCoins(newResults);
+      setIsFlipping(false);
+      setFlipCount(prev => prev + 1);
+      
+      // Lưu kết quả
+      const outcome = newResults.map(coin => coin.result);
+      const redCount = outcome.filter(result => result === 'Đỏ').length;
+      
+      setResults(prev => {
+        const newResults = [...prev, { 
+          flip: prev.length + 1, 
+          outcome: outcome.join(', '),
+          redCount: redCount,
+          timestamp: new Date().toLocaleTimeString(),
+          isImported: false
+        }];
+        const finalResults = newResults.length > 50 ? newResults.slice(-50) : newResults;
+        
+        // Phân tích pattern sau khi có kết quả mới
+        setTimeout(() => analyzePatterns(finalResults), 100);
+        
+        return finalResults;
+      });
+    }, 1500);
+  };
+
+  // Tính thống kê từ kết quả
+  useEffect(() => {
+    if (results.length === 0) {
+      setStatistics({});
+      return;
+    }
+
+    const redCounts = results.map(r => r.redCount);
+    const stats = {};
+    
+    for (let i = 0; i <= 4; i++) {
+      const count = redCounts.filter(rc => rc === i).length;
+      stats[i] = {
+        observed: count,
+        observedPercent: (count / results.length * 100).toFixed(1),
+        expected: (results.length * calculateProbabilities()[i].probability / 100).toFixed(1),
+        expectedPercent: calculateProbabilities()[i].probability.toFixed(1)
+      };
+    }
+    
+    setStatistics(stats);
+  }, [results]);
+
+  // Chế độ tự động
+  useEffect(() => {
+    if (autoMode && !isFlipping) {
+      const timer = setTimeout(() => {
+        flipCoins();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [autoMode, isFlipping, coins]);
+
+  const resetResults = () => {
+    setResults([]);
+    setFlipCount(0);
+    setPrediction(null);
+    setPatterns({});
+    setAiAnalysis('');
+    setCoins(coins.map(coin => ({ ...coin, result: null })));
+  };
+
+  const probabilities = calculateProbabilities();
+  const pieData = Object.keys(statistics).map(key => ({
+    name: `${key} Đỏ`,
+    value: parseFloat(statistics[key]?.observedPercent || 0),
+    expected: parseFloat(statistics[key]?.expectedPercent || 0)
+  }));
+
+  const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6'];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-red-50 to-blue-50 p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Coins className="w-8 h-8 text-red-600" />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800">
+                  Dự đoán Xác suất 4 Đồng Tiền
+                </h1>
+                <p className="text-gray-600">Mô phỏng và phân tích xác suất mặt Đỏ/Trắng</p>
+              </div>
+
+        {/* Form nhập lịch sử */}
+        {showHistoryInput && (
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">Nhập Lịch sử Kết quả</h2>
+              <button
+                onClick={() => setShowHistoryInput(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nhập kết quả (mỗi dòng một lần tung):
+                </label>
+                <textarea
+                  value={historyInput}
+                  onChange={(e) => setHistoryInput(e.target.value)}
+                  placeholder="Ví dụ:&#10;2&#10;1&#10;ĐTĐT&#10;3&#10;RTTR"
+                  className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                />
+                <div className="flex justify-between mt-2">
+                  <button
+                    onClick={processHistoryInput}
+                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg"
+                  >
+                    Xử lý dữ liệu
+                  </button>
+                  <span className="text-sm text-gray-500">
+                    {historyInput.split('\n').filter(line => line.trim()).length} dòng
+                  </span>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Hướng dẫn định dạng:</h3>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <div className="p-2 bg-gray-50 rounded">
+                    <strong>Định dạng số:</strong> Nhập số đồng đỏ (0-4)
+                    <br />Ví dụ: 2 (có 2 đồng đỏ, 2 đồng trắng)
+                  </div>
+                  <div className="p-2 bg-gray-50 rounded">
+                    <strong>Định dạng ký tự:</strong> Đ/D/R/1 = Đỏ, T/W/0 = Trắng
+                    <br />Ví dụ: ĐTĐT hoặc RTTR
+                  </div>
+                  <div className="p-2 bg-yellow-50 rounded border border-yellow-200">
+                    <strong>Lưu ý:</strong> Mỗi dòng là một lần tung, tối đa 4 đồng tiền
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-gray-600">
+                Số lần tung: <span className="font-bold text-blue-600">{flipCount}</span>
+              </div>
+              <button
+                onClick={() => setShowHistoryInput(!showHistoryInput)}
+                className="flex items-center space-x-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg"
+              >
+                <Upload className="w-4 h-4" />
+                <span>Nhập lịch sử</span>
+              </button>
+              <button
+                onClick={resetResults}
+                className="flex items-center space-x-2 px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Reset</span>
+              </button>
+              <button
+                onClick={() => setAutoMode(!autoMode)}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium ${
+                  autoMode 
+                    ? 'bg-orange-500 hover:bg-orange-600 text-white' 
+                    : 'bg-green-500 hover:bg-green-600 text-white'
+                }`}
+              >
+                {autoMode ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                <span>{autoMode ? 'Dừng tự động' : 'Tự động'}</span>
+              </button>
+              <button
+                onClick={flipCoins}
+                disabled={isFlipping}
+                className="flex items-center space-x-2 px-6 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-lg font-medium"
+              >
+                <Coins className="w-4 h-4" />
+                <span>{isFlipping ? 'Đang tung...' : 'Tung đồng tiền'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+          {/* Dự đoán AI */}
+          {prediction && (
+            <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg shadow-lg p-6 border-2 border-purple-200">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-purple-800">🔮 Dự đoán lần tiếp theo</h2>
+                <Brain className="w-6 h-6 text-purple-600" />
+              </div>
+              
+              <div className="text-center mb-4">
+                <div className="text-4xl font-bold text-purple-600 mb-2">
+                  {prediction.value} Đỏ
+                </div>
+                <div className="flex items-center justify-center space-x-2">
+                  <Target className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-600">
+                    Độ tin cậy: {prediction.confidence}%
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-xs text-purple-700">
+                  <strong>Phương pháp đồng thuận:</strong>
+                </div>
+                {prediction.methods && prediction.methods.map((method, index) => (
+                  <div key={index} className="text-xs bg-purple-100 px-2 py-1 rounded">
+                    {method === 'trend' && '📈 Phân tích xu hướng'}
+                    {method === 'cycle' && '🔄 Phát hiện chu kỳ'}
+                    {method === 'frequency' && '📊 Tần suất xuất hiện'}
+                    {method === 'markov' && '🔗 Chuỗi Markov'}
+                    {method === 'regression' && '📉 Hồi quy tuyến tính'}
+                  </div>
+                ))}
+              </div>
+
+              {aiAnalysis && (
+                <div className="mt-4 p-3 bg-white rounded border border-purple-200">
+                  <div className="text-xs font-medium text-purple-700 mb-1">Phân tích AI:</div>
+                  <div className="text-xs text-gray-700 whitespace-pre-line">
+                    {aiAnalysis}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Patterns phát hiện */}
+          {Object.keys(patterns).length > 0 && (
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-800">📊 Patterns phát hiện</h2>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="p-2 bg-gray-50 rounded">
+                  <div className="text-sm font-medium text-gray-700">Xu hướng:</div>
+                  <div className="text-xs text-gray-600">
+                    {patterns.trend > 0.3 ? '📈 Tăng' : patterns.trend < -0.3 ? '📉 Giảm' : '➡️ Ổn định'} 
+                    ({patterns.trend?.toFixed(2)})
+                  </div>
+                </div>
+                
+                <div className="p-2 bg-gray-50 rounded">
+                  <div className="text-sm font-medium text-gray-700">Trung bình:</div>
+                  <div className="text-xs text-gray-600">{patterns.average} đỏ/lần</div>
+                </div>
+                
+                {patterns.recent && (
+                  <div className="p-2 bg-gray-50 rounded">
+                    <div className="text-sm font-medium text-gray-700">5 lần gần nhất:</div>
+                    <div className="text-xs text-gray-600">{patterns.recent.join(', ')}</div>
+                  </div>
+                )}
+                
+                {patterns.cycle && (
+                  <div className="p-2 bg-yellow-50 rounded border border-yellow-200">
+                    <div className="text-sm font-medium text-yellow-800">Chu kỳ lặp:</div>
+                    <div className="text-xs text-yellow-700">
+                      {Object.keys(patterns.cycle)[0]} (lặp {Object.values(patterns.cycle)[0]} lần)
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Biểu đồ xu hướng */}
+          {results.length > 2 && (
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">📈 Xu hướng theo thời gian</h2>
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={results.slice(-15).map((result, index) => ({
+                  flip: result.flip,
+                  redCount: result.redCount,
+                  average: results.slice(0, results.indexOf(result) + 1)
+                    .reduce((sum, r) => sum + r.redCount, 0) / (results.indexOf(result) + 1)
+                }))}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="flip" />
+                  <YAxis domain={[0, 4]} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="redCount" stroke="#ef4444" strokeWidth={2} name="Số đỏ" />
+                  <Line type="monotone" dataKey="average" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" name="TB tích lũy" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          {/* Hiển thị 4 đồng tiền */}
+          {coins.map((coin, index) => (
+            <div key={coin.id} className="bg-white rounded-lg shadow-lg p-6">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                  Đồng tiền {coin.id}
+                </h3>
+                <div className="relative w-24 h-24 mx-auto mb-4">
+                  <div className={`w-24 h-24 rounded-full flex items-center justify-center text-white font-bold text-lg transition-all duration-300 ${
+                    coin.isFlipping ? 'animate-spin' : ''
+                  } ${
+                    coin.result === 'Đỏ' ? 'bg-red-500' :
+                    coin.result === 'Trắng' ? 'bg-gray-300 text-gray-700' :
+                    'bg-gray-200 border-4 border-dashed border-gray-400'
+                  }`}>
+                    {coin.isFlipping ? '?' : (coin.result || '?')}
+                  </div>
+                </div>
+                <div className="text-sm text-gray-600">
+                  {coin.result ? coin.result : 'Chờ kết quả'}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+          {/* Bảng xác suất lý thuyết */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">Xác suất Lý thuyết</h2>
+              <Calculator className="w-5 h-5 text-blue-600" />
+            </div>
+            
+            <div className="space-y-3">
+              {probabilities.map((prob, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index] }}></div>
+                    <span className="font-medium text-gray-700">{prob.outcome}</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-blue-600">{prob.probability.toFixed(1)}%</div>
+                    <div className="text-xs text-gray-500">{prob.count}/16 trường hợp</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-700">
+                <strong>Công thức:</strong> C(4,k) × (1/2)⁴ = C(4,k)/16
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                Với C(4,k) là số cách chọn k đồng đỏ từ 4 đồng
+              </p>
+            </div>
+          </div>
+
+          {/* So sánh kết quả thực tế vs lý thuyết */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">So sánh Thực tế vs Lý thuyết</h2>
+              <TrendingUp className="w-5 h-5 text-green-600" />
+            </div>
+            
+            {results.length > 0 ? (
+              <div className="space-y-3">
+                {Object.keys(statistics).map((key) => (
+                  <div key={key} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-medium text-gray-700">{key} Đỏ</span>
+                      <div className="flex space-x-4 text-sm">
+                        <span className="text-green-600">
+                          Thực: {statistics[key].observedPercent}%
+                        </span>
+                        <span className="text-blue-600">
+                          Lý: {statistics[key].expectedPercent}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex space-x-2">
+                      <div className="flex-1 bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-green-500 h-2 rounded-full"
+                          style={{ width: `${Math.min(100, statistics[key].observedPercent * 2)}%` }}
+                        />
+                      </div>
+                      <div className="flex-1 bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-blue-500 h-2 rounded-full"
+                          style={{ width: `${Math.min(100, statistics[key].expectedPercent * 2)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 py-8">
+                <Coins className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>Chưa có dữ liệu</p>
+                <p className="text-sm">Tung đồng tiền để xem so sánh</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Biểu đồ và lịch sử */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {/* Biểu đồ cột */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Phân bố Kết quả</h2>
+            
+            {results.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={probabilities.map((prob, index) => ({
+                  name: `${index} Đỏ`,
+                  expected: prob.probability,
+                  observed: parseFloat(statistics[index]?.observedPercent || 0)
+                }))}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip formatter={(value, name) => [`${value.toFixed(1)}%`, name === 'expected' ? 'Lý thuyết' : 'Thực tế']} />
+                  <Bar dataKey="expected" fill="#3b82f6" name="Lý thuyết" />
+                  <Bar dataKey="observed" fill="#10b981" name="Thực tế" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center text-gray-500 py-16">
+                <p>Chưa có dữ liệu để hiển thị biểu đồ</p>
+              </div>
+            )}
+          </div>
+
+          {/* Lịch sử kết quả */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              Lịch sử Kết quả (10 lần gần nhất)
+            </h2>
+            
+            <div className="max-h-72 overflow-y-auto">
+              {results.length > 0 ? (
+                <div className="space-y-2">
+                  {results.slice(-10).reverse().map((result, index) => (
+                    <div key={result.flip} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-sm font-medium text-gray-600">#{result.flip}</span>
+                        <div className="flex space-x-1">
+                          {result.outcome.split(', ').map((coin, coinIndex) => (
+                            <div
+                              key={coinIndex}
+                              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                coin === 'Đỏ' ? 'bg-red-500 text-white' : 'bg-gray-300 text-gray-700'
+                              }`}
+                            >
+                              {coin === 'Đỏ' ? 'Đ' : 'T'}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-blue-600">
+                          {result.redCount} Đỏ
+                        </div>
+                        <div className="text-xs text-gray-500 flex items-center">
+                          {result.isImported && <span className="text-purple-500 mr-1">📥</span>}
+                          {result.timestamp}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 py-8">
+                  <p>Chưa có lịch sử</p>
+                  <p className="text-sm">Tung đồng tiền để xem kết quả</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Công thức và giải thích */}
+        <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Công thức Tính Xác suất</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="font-medium text-gray-700 mb-2">Xác suất có k đồng đỏ:</h3>
+              <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm">
+                P(k đỏ) = C(4,k) × (1/2)⁴<br/>
+                = C(4,k) / 16
+              </div>
+              <p className="text-sm text-gray-600 mt-2">
+                Với C(4,k) = 4!/(k!(4-k)!) là tổ hợp chọn k từ 4
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-medium text-gray-700 mb-2">Ví dụ tính C(4,k):</h3>
+              <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm space-y-1">
+                C(4,0) = 1 &nbsp;&nbsp; C(4,1) = 4<br/>
+                C(4,2) = 6 &nbsp;&nbsp; C(4,3) = 4<br/>
+                C(4,4) = 1
+              </div>
+              <p className="text-sm text-gray-600 mt-2">
+                Tổng: 1+4+6+4+1 = 16 trường hợp
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CoinProbabilityPredictor;
