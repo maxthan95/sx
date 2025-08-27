@@ -77,7 +77,7 @@
                                         <Icon name={methodIcons[method.name] || 'Brain'} className={`w-5 h-5 ${method.agrees ? 'text-purple-600' : 'text-gray-400'}`} />
                                         <span className="text-sm text-gray-700">{method.name}</span>
                                     </div>
-                                    <div className={`text-sm font-bold ${method.agrees ? 'text-purple-600' : 'text-gray-500'}`}>{method.prediction} Đỏ</div>
+                                    <div className={`text-sm font-bold ${method.agrees ? 'text-purple-600' : 'text-gray-500'}`}>{method.prediction !== null ? `${method.prediction} Đỏ` : 'N/A'}</div>
                                 </div>
                             ))}
                         </div>
@@ -197,11 +197,6 @@
               const [analysis, setAnalysis] = useState(null);
               const [patterns, setPatterns] = useState({});
               const [isAnalyzing, setIsAnalyzing] = useState(false);
-              // ... các state khác không thay đổi
-              const [isFlipping, setIsFlipping] = useState(false);
-              const [autoMode, setAutoMode] = useState(false);
-              const [showHistoryInput, setShowHistoryInput] = useState(false);
-              const [historyInput, setHistoryInput] = useState('');
               const [visualHistory, setVisualHistory] = useState(false);
               
               const accuracyStats = useMemo(() => {
@@ -212,6 +207,41 @@
                 return { correct, total, accuracy: total > 0 ? (correct / total * 100) : 0 };
               }, [results]);
 
+              const theoreticalProbabilities = useMemo(() => {
+                const factorial = (n) => (n <= 1 ? 1 : n * factorial(n - 1));
+                const probabilities = [];
+                for (let redCount = 0; redCount <= 4; redCount++) {
+                  const combinations = factorial(4) / (factorial(redCount) * factorial(4 - redCount));
+                  probabilities.push({
+                    outcome: `${redCount} Đỏ`,
+                    probability: (combinations / 16) * 100,
+                  });
+                }
+                return probabilities;
+              }, []);
+              
+              const statistics = useMemo(() => {
+                if (results.length === 0) return {};
+                const redCounts = results.map(r => r.redCount);
+                const stats = {};
+                for (let i = 0; i <= 4; i++) {
+                  const count = redCounts.filter(rc => rc === i).length;
+                  stats[i] = {
+                    observedPercent: (count / results.length * 100),
+                  };
+                }
+                return stats;
+              }, [results]);
+
+              const barChartData = useMemo(() => {
+                if (!theoreticalProbabilities || Object.keys(statistics).length === 0) return [];
+                return theoreticalProbabilities.map((prob, index) => ({
+                    name: prob.outcome,
+                    "Lý thuyết": prob.probability,
+                    "Thực tế": statistics[index]?.observedPercent || 0
+                }));
+              }, [theoreticalProbabilities, statistics]);
+
               const analyzeAndPredict = (currentResults) => {
                 if (currentResults.length < 5) {
                   setPrediction(null);
@@ -221,7 +251,13 @@
                 setIsAnalyzing(true);
                 setTimeout(() => {
                   const redCounts = currentResults.map(r => r.redCount);
-                  const predictByFrequency = (data) => parseInt(Object.keys(data.reduce((acc, val) => ({ ...acc, [val]: (acc[val] || 0) + 1 }), {})).reduce((a, b) => data.reduce((c,d)=>c+d,0)[a] > data.reduce((c,d)=>c+d,0)[b] ? a : b));
+                  
+                  const predictByFrequency = (data) => {
+                      if (data.length === 0) return null;
+                      const freq = data.reduce((acc, val) => ({ ...acc, [val]: (acc[val] || 0) + 1 }), {});
+                      return parseInt(Object.keys(freq).reduce((a, b) => freq[a] > freq[b] ? a : b));
+                  };
+
                   const predictByMarkov = (data) => {
                     if (data.length < 2) return null;
                     const transitions = {};
@@ -304,7 +340,6 @@
               }, [results]);
 
               const flipCount = results.length;
-              const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } = Recharts;
 
               return (
                 <div className="min-h-screen bg-gray-100 p-4 md:p-6">
@@ -344,7 +379,7 @@
                             <StatCard iconName="History" title="5 lần gần nhất" value="" color="border-yellow-500">
                                 <div className="flex items-center gap-2">
                                     {(patterns.recent || []).map((res, i) => (
-                                        <div key={i} className="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs bg-gray-200">
+                                        <div key={i} className={`w-8 h-8 rounded-full flex items-center justify-center text-gray-700 font-bold text-sm ${res > 2 ? 'bg-red-100' : 'bg-gray-200'}`}>
                                             {res}
                                         </div>
                                     ))}
@@ -356,7 +391,7 @@
                           <h2 className="text-lg font-semibold text-gray-800 mb-4">Phân Bố Kết Quả</h2>
                           {results.length > 0 ? (
                             <ResponsiveContainer width="100%" height={250}>
-                              <BarChart data={[]} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                              <BarChart data={barChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis unit="%" /><Tooltip formatter={(value) => `${value.toFixed(1)}%`} /><Legend /><Bar dataKey="Lý thuyết" fill="#8884d8" /><Bar dataKey="Thực tế" fill="#82ca9d" />
                               </BarChart>
                             </ResponsiveContainer>
